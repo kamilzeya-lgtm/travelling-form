@@ -1,0 +1,727 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Travel Application — Boarding Pass</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,700;1,9..144,500&family=Inter:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --navy-deep:#0d1730;
+    --navy:#152444;
+    --navy-solid:#182a4d;
+    --navy-light:#28395e;
+    --navy-lighter:#3a4d78;
+    --gold:#c9a24b;
+    --gold-light:#e6cd8b;
+    --cream:#f4efe1;
+    --cream-dim:#cfc7ae;
+    --teal:#3f8f89;
+    --coral:#c1442b;
+    --shadow:0 30px 60px -20px rgba(5,10,25,0.6);
+    --display:'Fraunces', serif;
+    --body:'Inter', sans-serif;
+    --mono:'Space Mono', monospace;
+  }
+  *{box-sizing:border-box;}
+  html,body{height:100%;}
+  body{
+    margin:0;
+    min-height:100vh;
+    font-family:var(--body);
+    color:var(--cream);
+    background:
+      radial-gradient(circle at 20% 15%, rgba(63,143,137,0.18), transparent 45%),
+      radial-gradient(circle at 85% 80%, rgba(201,162,75,0.14), transparent 50%),
+      linear-gradient(160deg, var(--navy-deep), #0a1122 70%);
+    overflow-x:hidden;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:48px 16px;
+    position:relative;
+  }
+
+  /* ---------- Ambient background: stars + flight path ---------- */
+  .stars{
+    position:fixed; inset:0; z-index:0; pointer-events:none;
+    background-image:
+      radial-gradient(1.5px 1.5px at 40px 60px, rgba(244,239,225,0.9), transparent),
+      radial-gradient(1.5px 1.5px at 140px 20px, rgba(244,239,225,0.6), transparent),
+      radial-gradient(1px 1px at 210px 110px, rgba(244,239,225,0.7), transparent),
+      radial-gradient(1.5px 1.5px at 260px 40px, rgba(244,239,225,0.5), transparent),
+      radial-gradient(1px 1px at 320px 150px, rgba(244,239,225,0.8), transparent),
+      radial-gradient(1.5px 1.5px at 30px 170px, rgba(244,239,225,0.5), transparent);
+    background-repeat:repeat;
+    background-size:360px 220px;
+    animation:twinkle 6s ease-in-out infinite alternate;
+    opacity:0.6;
+  }
+  @keyframes twinkle{ from{opacity:0.35;} to{opacity:0.75;} }
+
+  .flight{
+    position:fixed; z-index:0; pointer-events:none; opacity:0.5;
+    font-size:22px; top:14%; left:-5%;
+    filter:drop-shadow(0 0 6px rgba(230,205,139,0.5));
+    animation:fly 26s linear infinite;
+  }
+  @keyframes fly{
+    0%{ transform:translate(0,0) rotate(18deg); opacity:0; }
+    8%{ opacity:0.55; }
+    50%{ transform:translate(60vw, 12vh) rotate(14deg); }
+    92%{ opacity:0.55; }
+    100%{ transform:translate(112vw, -4vh) rotate(10deg); opacity:0; }
+  }
+
+  /* ---------- Scene & 3D card ---------- */
+  .scene{
+    position:relative; z-index:1;
+    width:100%; max-width:660px;
+    perspective:1600px;
+  }
+  .pass-card{
+    position:relative;
+    background:linear-gradient(160deg, var(--navy-solid), var(--navy-deep) 85%);
+    border:1px solid rgba(230,205,139,0.18);
+    border-radius:22px;
+    box-shadow:var(--shadow);
+    transform-style:preserve-3d;
+    transform:rotateX(var(--rx,0deg)) rotateY(var(--ry,0deg));
+    transition:transform 0.25s ease-out;
+    overflow:hidden;
+  }
+  @media (prefers-reduced-motion: reduce){
+    .pass-card{ transition:none; }
+    .flight, .stars{ animation:none; }
+  }
+
+  /* ---------- Ticket header ---------- */
+  .pass-header{
+    padding:34px 34px 22px;
+    position:relative;
+    transform:translateZ(24px);
+  }
+  .eyebrow{
+    font-family:var(--mono);
+    font-size:11px;
+    letter-spacing:0.22em;
+    color:var(--gold-light);
+    text-transform:uppercase;
+    display:flex;
+    align-items:center;
+    gap:8px;
+  }
+  .eyebrow::before{ content:"✈"; font-size:13px; }
+  h1{
+    font-family:var(--display);
+    font-weight:600;
+    font-size:clamp(28px,5vw,38px);
+    margin:8px 0 4px;
+    line-height:1.05;
+    color:var(--cream);
+  }
+  .dest-live{ color:var(--gold-light); font-style:italic; }
+  .subtitle{ font-size:13.5px; color:var(--cream-dim); margin:0 0 22px; }
+
+  .ticket-row{
+    display:grid;
+    grid-template-columns:repeat(4,1fr);
+    gap:14px;
+    background:rgba(255,255,255,0.03);
+    border:1px solid rgba(230,205,139,0.14);
+    border-radius:12px;
+    padding:16px 18px;
+  }
+  .ticket-field .label{
+    font-family:var(--mono);
+    font-size:9.5px;
+    letter-spacing:0.14em;
+    text-transform:uppercase;
+    color:var(--teal);
+    display:block;
+    margin-bottom:5px;
+  }
+  .ticket-field .value{
+    font-family:var(--mono);
+    font-size:13.5px;
+    color:var(--cream);
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
+  }
+
+  /* perforation divider */
+  .perforation{
+    position:relative;
+    height:0;
+    border-top:2px dashed rgba(230,205,139,0.28);
+    margin:26px -34px 0;
+  }
+  .perforation::before, .perforation::after{
+    content:"";
+    position:absolute; top:-11px;
+    width:22px; height:22px;
+    border-radius:50%;
+    background:var(--navy-deep);
+    box-shadow:inset 0 0 0 1px rgba(230,205,139,0.18);
+  }
+  .perforation::before{ left:-11px; }
+  .perforation::after{ right:-11px; }
+
+  /* ---------- Step dots ---------- */
+  .dots-wrap{ padding:24px 34px 4px; transform:translateZ(18px); }
+  .dots-track{ position:relative; display:flex; justify-content:space-between; align-items:center; }
+  .dots-line{
+    position:absolute; left:16px; right:16px; top:15px; height:2px;
+    background:rgba(230,205,139,0.16);
+  }
+  .dots-fill{
+    position:absolute; left:16px; top:15px; height:2px;
+    background:var(--gold);
+    width:0%;
+    transition:width 0.4s ease;
+  }
+  .dot{
+    position:relative; z-index:1;
+    display:flex; flex-direction:column; align-items:center; gap:8px;
+    font-family:var(--mono); font-size:10px; color:var(--cream-dim);
+    width:70px; text-align:center;
+  }
+  .dot-mark{
+    width:32px; height:32px; border-radius:50%;
+    background:var(--navy-deep);
+    border:2px solid rgba(230,205,139,0.3);
+    display:flex; align-items:center; justify-content:center;
+    font-family:var(--body); font-weight:700; font-size:13px;
+    color:var(--cream-dim);
+    transition:all 0.3s ease;
+  }
+  .dot.active .dot-mark{
+    border-color:var(--gold);
+    background:var(--gold);
+    color:var(--navy-deep);
+    box-shadow:0 0 0 5px rgba(201,162,75,0.16);
+  }
+  .dot.done .dot-mark{
+    border-color:var(--teal);
+    background:var(--teal);
+    color:var(--cream);
+  }
+  .dot.active span.dlabel{ color:var(--gold-light); }
+  .dot.done span.dlabel{ color:var(--teal); }
+
+  /* ---------- Form body ---------- */
+  .pass-body{
+    padding:26px 34px 10px;
+    position:relative;
+    min-height:270px;
+    perspective:1000px;
+    transform:translateZ(10px);
+  }
+  .step-panel{
+    position:absolute; inset:26px 34px 10px;
+    transform-style:preserve-3d;
+    backface-visibility:hidden;
+    transition:transform 0.5s cubic-bezier(.4,.1,.2,1), opacity 0.4s ease;
+    opacity:0;
+    transform:rotateY(90deg) translateX(30px);
+    pointer-events:none;
+  }
+  .step-panel.active{
+    position:relative;
+    opacity:1;
+    transform:rotateY(0deg) translateX(0);
+    pointer-events:auto;
+  }
+  .step-panel.prev{ transform:rotateY(-90deg) translateX(-30px); }
+  body.reduced .step-panel{ transition:opacity 0.3s ease; transform:none !important; }
+
+  .step-title{
+    font-family:var(--display);
+    font-size:20px;
+    font-weight:600;
+    margin:0 0 4px;
+    color:var(--cream);
+  }
+  .step-desc{ font-size:13px; color:var(--cream-dim); margin:0 0 20px; }
+
+  .field-grid{ display:grid; grid-template-columns:1fr 1fr; gap:16px 18px; }
+  .field{ display:flex; flex-direction:column; gap:6px; margin-bottom:16px; }
+  .field.full{ grid-column:1 / -1; }
+  .field label{
+    font-size:11.5px; letter-spacing:0.05em; text-transform:uppercase;
+    color:var(--cream-dim); font-weight:600;
+  }
+  .field input, .field select, .field textarea{
+    font-family:var(--body);
+    font-size:14.5px;
+    background:rgba(255,255,255,0.04);
+    border:1px solid rgba(230,205,139,0.22);
+    border-radius:9px;
+    padding:11px 12px;
+    color:var(--cream);
+    outline:none;
+    transition:border-color 0.2s ease, background 0.2s ease;
+  }
+  .field textarea{ resize:vertical; min-height:70px; font-family:var(--body); }
+  .field input::placeholder, .field textarea::placeholder{ color:rgba(244,239,225,0.35); }
+  .field input:focus, .field select:focus, .field textarea:focus{
+    border-color:var(--gold);
+    background:rgba(230,205,139,0.06);
+  }
+  .field select{ color-scheme:dark; }
+  .field input:invalid:not(:placeholder-shown){ border-color:rgba(193,68,43,0.6); }
+
+  .confirm-row{
+    display:flex; align-items:flex-start; gap:10px;
+    background:rgba(255,255,255,0.03);
+    border:1px solid rgba(230,205,139,0.16);
+    border-radius:10px; padding:14px;
+    margin-top:6px;
+  }
+  .confirm-row input{ margin-top:3px; accent-color:var(--gold); width:16px; height:16px; }
+  .confirm-row label{ font-size:12.5px; color:var(--cream-dim); line-height:1.5; }
+
+  .summary-list{ display:grid; grid-template-columns:1fr 1fr; gap:10px 18px; margin:0 0 18px; padding:0; list-style:none; }
+  .summary-list .row{ display:flex; flex-direction:column; gap:2px; }
+  .summary-list dt{ font-family:var(--mono); font-size:9.5px; letter-spacing:0.12em; text-transform:uppercase; color:var(--teal); }
+  .summary-list dd{ margin:0; font-size:13.5px; color:var(--cream); }
+
+  /* ---------- Nav ---------- */
+  .pass-footer{
+    display:flex; align-items:center; justify-content:space-between;
+    padding:20px 34px 30px;
+    transform:translateZ(16px);
+  }
+  .btn{
+    font-family:var(--body); font-weight:600; font-size:14px;
+    border-radius:10px; padding:12px 22px; cursor:pointer;
+    border:1px solid transparent;
+    transition:transform 0.15s ease, box-shadow 0.15s ease, background 0.2s ease;
+  }
+  .btn:active{ transform:scale(0.97); }
+  .btn-ghost{
+    background:transparent; color:var(--cream-dim);
+    border-color:rgba(244,239,225,0.2);
+  }
+  .btn-ghost:hover{ color:var(--cream); border-color:rgba(244,239,225,0.4); }
+  .btn-ghost[hidden]{ visibility:hidden; }
+  .btn-primary{
+    background:linear-gradient(135deg, var(--gold-light), var(--gold));
+    color:var(--navy-deep);
+    box-shadow:0 10px 20px -8px rgba(201,162,75,0.5);
+  }
+  .btn-primary:hover{ box-shadow:0 12px 26px -8px rgba(201,162,75,0.65); }
+
+  .footnote{
+    text-align:center; font-size:11px; color:rgba(244,239,225,0.4);
+    padding:0 34px 26px; font-family:var(--mono);
+  }
+
+  /* ---------- Confirmation overlay ---------- */
+  .overlay{
+    position:absolute; inset:0;
+    background:linear-gradient(160deg, var(--navy-solid), var(--navy-deep) 85%);
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    text-align:center; padding:50px 34px;
+    opacity:0; pointer-events:none;
+    transition:opacity 0.4s ease;
+  }
+  .overlay.show{ opacity:1; pointer-events:auto; }
+  .stamp{
+    width:130px; height:130px; border-radius:50%;
+    border:4px solid var(--coral);
+    color:var(--coral);
+    display:flex; align-items:center; justify-content:center;
+    font-family:var(--display); font-weight:700; font-size:15px;
+    text-transform:uppercase; letter-spacing:0.06em;
+    transform:rotate(-10deg) scale(0.4);
+    opacity:0;
+    box-shadow:0 0 0 3px rgba(193,68,43,0.15);
+  }
+  .overlay.show .stamp{ animation:stampDown 0.55s cubic-bezier(.2,1.4,.4,1) forwards 0.15s; }
+  @keyframes stampDown{
+    0%{ transform:rotate(-10deg) scale(2.6); opacity:0; }
+    60%{ opacity:1; }
+    100%{ transform:rotate(-10deg) scale(1); opacity:1; }
+  }
+  .overlay h2{ font-family:var(--display); font-size:24px; margin:22px 0 6px; }
+  .overlay p{ font-size:13.5px; color:var(--cream-dim); margin:0 0 4px; max-width:340px; }
+  .ref{ font-family:var(--mono); color:var(--gold-light); font-size:15px; margin:10px 0 26px; letter-spacing:0.05em; }
+
+  @media (max-width:560px){
+    .field-grid{ grid-template-columns:1fr; }
+    .ticket-row{ grid-template-columns:1fr 1fr; }
+    .pass-header, .pass-body, .pass-footer, .dots-wrap, .footnote{ padding-left:20px; padding-right:20px; }
+    .perforation{ margin-left:-20px; margin-right:-20px; }
+    .step-panel{ inset:26px 20px 10px; }
+    .dot{ width:56px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="stars"></div>
+<div class="flight">✈</div>
+
+<div class="scene" id="scene">
+  <div class="pass-card" id="passCard">
+
+    <div class="pass-header">
+      <span class="eyebrow">Boarding Pass · Application</span>
+      <h1>Travelling to <span class="dest-live" id="destLive">your next destination</span></h1>
+      <p class="subtitle">Complete every step to generate your travel application.</p>
+
+      <div class="ticket-row">
+        <div class="ticket-field">
+          <span class="label">Traveler</span>
+          <span class="value" id="ticketName">—</span>
+        </div>
+        <div class="ticket-field">
+          <span class="label">Destination</span>
+          <span class="value" id="ticketDest">—</span>
+        </div>
+        <div class="ticket-field">
+          <span class="label">Depart</span>
+          <span class="value" id="ticketDepart">—</span>
+        </div>
+        <div class="ticket-field">
+          <span class="label">Return</span>
+          <span class="value" id="ticketReturn">—</span>
+        </div>
+      </div>
+
+      <div class="perforation"></div>
+    </div>
+
+    <div class="dots-wrap">
+      <div class="dots-track">
+        <div class="dots-line"></div>
+        <div class="dots-fill" id="dotsFill"></div>
+        <div class="dot active" data-dot="0"><div class="dot-mark">1</div><span class="dlabel">Traveler</span></div>
+        <div class="dot" data-dot="1"><div class="dot-mark">2</div><span class="dlabel">Trip</span></div>
+        <div class="dot" data-dot="2"><div class="dot-mark">3</div><span class="dlabel">Prefs</span></div>
+        <div class="dot" data-dot="3"><div class="dot-mark">4</div><span class="dlabel">Review</span></div>
+      </div>
+    </div>
+
+    <form id="travelForm" novalidate>
+      <div class="pass-body" id="passBody">
+
+        <!-- Step 1 -->
+        <div class="step-panel active" data-step="0">
+          <h2 class="step-title">Traveler details</h2>
+          <p class="step-desc">Who is this application for?</p>
+          <div class="field-grid">
+            <div class="field full">
+              <label for="fullName">Full name</label>
+              <input type="text" id="fullName" name="fullName" placeholder="As shown on passport" required>
+            </div>
+            <div class="field">
+              <label for="email">Email</label>
+              <input type="email" id="email" name="email" placeholder="you@example.com" required>
+            </div>
+            <div class="field">
+              <label for="phone">Phone</label>
+              <input type="tel" id="phone" name="phone" placeholder="+1 555 000 0000" required>
+            </div>
+            <div class="field">
+              <label for="nationality">Nationality</label>
+              <select id="nationality" name="nationality" required>
+                <option value="" disabled selected>Select country</option>
+                <option>United States</option>
+                <option>United Kingdom</option>
+                <option>Canada</option>
+                <option>India</option>
+                <option>Australia</option>
+                <option>Germany</option>
+                <option>France</option>
+                <option>Japan</option>
+                <option>Brazil</option>
+                <option>South Africa</option>
+                <option>Singapore</option>
+                <option>Other</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="passport">Passport number</label>
+              <input type="text" id="passport" name="passport" placeholder="e.g. X1234567" required>
+            </div>
+          </div>
+        </div>
+
+        <!-- Step 2 -->
+        <div class="step-panel" data-step="1">
+          <h2 class="step-title">Trip details</h2>
+          <p class="step-desc">Where and when are you headed?</p>
+          <div class="field-grid">
+            <div class="field full">
+              <label for="destination">Destination</label>
+              <input type="text" id="destination" name="destination" placeholder="City or country" required>
+            </div>
+            <div class="field">
+              <label for="purpose">Purpose of travel</label>
+              <select id="purpose" name="purpose" required>
+                <option value="" disabled selected>Select purpose</option>
+                <option>Tourism</option>
+                <option>Business</option>
+                <option>Study</option>
+                <option>Family visit</option>
+                <option>Other</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="travelers">Number of travelers</label>
+              <input type="number" id="travelers" name="travelers" min="1" max="20" value="1" required>
+            </div>
+            <div class="field">
+              <label for="departDate">Departure date</label>
+              <input type="date" id="departDate" name="departDate" required>
+            </div>
+            <div class="field">
+              <label for="returnDate">Return date</label>
+              <input type="date" id="returnDate" name="returnDate" required>
+            </div>
+          </div>
+        </div>
+
+        <!-- Step 3 -->
+        <div class="step-panel" data-step="2">
+          <h2 class="step-title">Preferences</h2>
+          <p class="step-desc">Tell us how you'd like to travel and stay.</p>
+          <div class="field-grid">
+            <div class="field">
+              <label for="travelClass">Travel class</label>
+              <select id="travelClass" name="travelClass" required>
+                <option value="" disabled selected>Select class</option>
+                <option>Economy</option>
+                <option>Premium economy</option>
+                <option>Business</option>
+                <option>First</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="accommodation">Accommodation</label>
+              <select id="accommodation" name="accommodation" required>
+                <option value="" disabled selected>Select accommodation</option>
+                <option>Hotel</option>
+                <option>Resort</option>
+                <option>Hostel</option>
+                <option>Rental / Airbnb</option>
+                <option>Not needed</option>
+              </select>
+            </div>
+            <div class="field full">
+              <label for="requests">Special requests (optional)</label>
+              <textarea id="requests" name="requests" placeholder="Dietary needs, accessibility, seating preference…"></textarea>
+            </div>
+          </div>
+        </div>
+
+        <!-- Step 4 -->
+        <div class="step-panel" data-step="3">
+          <h2 class="step-title">Review &amp; submit</h2>
+          <p class="step-desc">Check your details before submitting.</p>
+          <dl class="summary-list" id="summaryList"></dl>
+          <div class="confirm-row">
+            <input type="checkbox" id="confirmAccurate" name="confirmAccurate" required>
+            <label for="confirmAccurate">I confirm the details above are accurate to the best of my knowledge.</label>
+          </div>
+        </div>
+
+      </div>
+
+      <div class="pass-footer">
+        <button type="button" class="btn btn-ghost" id="backBtn" hidden>← Back</button>
+        <button type="button" class="btn btn-primary" id="nextBtn">Continue →</button>
+      </div>
+    </form>
+
+    <p class="footnote">Applications are typically processed within 3 business days.</p>
+
+    <!-- Confirmation overlay -->
+    <div class="overlay" id="overlay">
+      <div class="stamp">Confirmed</div>
+      <h2>Application submitted</h2>
+      <p>Your travel application has been received. A confirmation has been sent to your email.</p>
+      <div class="ref" id="refNumber">TRV-000000</div>
+      <button type="button" class="btn btn-primary" id="resetBtn">Start new application</button>
+    </div>
+
+  </div>
+</div>
+
+<script>
+(function(){
+  var reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if(reduceMotion){ document.body.classList.add('reduced'); }
+
+  var steps = Array.prototype.slice.call(document.querySelectorAll('.step-panel'));
+  var dots = Array.prototype.slice.call(document.querySelectorAll('.dot'));
+  var dotsFill = document.getElementById('dotsFill');
+  var backBtn = document.getElementById('backBtn');
+  var nextBtn = document.getElementById('nextBtn');
+  var form = document.getElementById('travelForm');
+  var overlay = document.getElementById('overlay');
+  var current = 0;
+  var total = steps.length;
+
+  var labels = ['Continue →','Continue →','Review application →','Submit application'];
+
+  function validateStep(panel){
+    var fields = panel.querySelectorAll('input[required], select[required], textarea[required]');
+    for(var i=0;i<fields.length;i++){
+      if(!fields[i].checkValidity()){
+        fields[i].reportValidity();
+        return false;
+      }
+    }
+    return true;
+  }
+
+  function updateDots(n){
+    dots.forEach(function(d,i){
+      d.classList.toggle('active', i===n);
+      d.classList.toggle('done', i<n);
+    });
+    dotsFill.style.width = (n/(total-1))*100 + '%';
+  }
+
+  function goToStep(n){
+    steps.forEach(function(p, i){
+      p.classList.remove('active','prev');
+      if(i===n){ p.classList.add('active'); }
+      else if(i<n){ p.classList.add('prev'); }
+    });
+    current = n;
+    updateDots(n);
+    backBtn.hidden = (n===0);
+    nextBtn.textContent = labels[n];
+    if(n===3){ renderSummary(); }
+  }
+
+  function fieldLabel(id){
+    var el = document.getElementById(id);
+    return el && el.previousElementSibling ? el.previousElementSibling.textContent : id;
+  }
+
+  function fmtDate(v){
+    if(!v) return '—';
+    var d = new Date(v + 'T00:00:00');
+    if(isNaN(d)) return v;
+    return d.toLocaleDateString(undefined, { day:'numeric', month:'short', year:'numeric' });
+  }
+
+  function renderSummary(){
+    var data = [
+      ['Traveler', document.getElementById('fullName').value || '—'],
+      ['Email', document.getElementById('email').value || '—'],
+      ['Nationality', document.getElementById('nationality').value || '—'],
+      ['Passport no.', document.getElementById('passport').value || '—'],
+      ['Destination', document.getElementById('destination').value || '—'],
+      ['Purpose', document.getElementById('purpose').value || '—'],
+      ['Depart', fmtDate(document.getElementById('departDate').value)],
+      ['Return', fmtDate(document.getElementById('returnDate').value)],
+      ['Travelers', document.getElementById('travelers').value || '—'],
+      ['Class', document.getElementById('travelClass').value || '—'],
+      ['Accommodation', document.getElementById('accommodation').value || '—']
+    ];
+    var list = document.getElementById('summaryList');
+    list.innerHTML = '';
+    data.forEach(function(pair){
+      var wrap = document.createElement('div');
+      wrap.className = 'row';
+      var dt = document.createElement('dt');
+      dt.textContent = pair[0];
+      var dd = document.createElement('dd');
+      dd.textContent = pair[1];
+      wrap.appendChild(dt);
+      wrap.appendChild(dd);
+      list.appendChild(wrap);
+    });
+  }
+
+  nextBtn.addEventListener('click', function(){
+    if(current < total-1){
+      if(!validateStep(steps[current])) return;
+      goToStep(current+1);
+    } else {
+      if(!validateStep(steps[current])) return;
+      submitApplication();
+    }
+  });
+
+  backBtn.addEventListener('click', function(){
+    if(current > 0) goToStep(current-1);
+  });
+
+  function genRef(){
+    var chars = Math.random().toString(36).slice(2,7).toUpperCase();
+    return 'TRV-' + chars + '-' + new Date().getFullYear();
+  }
+
+  function submitApplication(){
+    document.getElementById('refNumber').textContent = genRef();
+    overlay.classList.add('show');
+  }
+
+  document.getElementById('resetBtn').addEventListener('click', function(){
+    form.reset();
+    overlay.classList.remove('show');
+    document.getElementById('destLive').textContent = 'your next destination';
+    ['ticketName','ticketDest','ticketDepart','ticketReturn'].forEach(function(id){
+      document.getElementById(id).textContent = '—';
+    });
+    goToStep(0);
+  });
+
+  // live ticket header updates
+  document.getElementById('fullName').addEventListener('input', function(e){
+    document.getElementById('ticketName').textContent = e.target.value || '—';
+  });
+  document.getElementById('destination').addEventListener('input', function(e){
+    var v = e.target.value;
+    document.getElementById('ticketDest').textContent = v || '—';
+    document.getElementById('destLive').textContent = v || 'your next destination';
+  });
+  var departInput = document.getElementById('departDate');
+  var returnInput = document.getElementById('returnDate');
+  var today = new Date().toISOString().split('T')[0];
+  departInput.min = today;
+  departInput.addEventListener('change', function(e){
+    document.getElementById('ticketDepart').textContent = fmtDate(e.target.value);
+    returnInput.min = e.target.value || today;
+    if(returnInput.value && returnInput.value < e.target.value){ returnInput.value = e.target.value; }
+  });
+  returnInput.addEventListener('change', function(e){
+    document.getElementById('ticketReturn').textContent = fmtDate(e.target.value);
+  });
+
+  // 3D mouse parallax tilt (skip on touch / reduced motion)
+  var card = document.getElementById('passCard');
+  var scene = document.getElementById('scene');
+  var isCoarse = window.matchMedia('(pointer: coarse)').matches;
+  if(!reduceMotion && !isCoarse){
+    scene.addEventListener('mousemove', function(e){
+      var rect = scene.getBoundingClientRect();
+      var x = (e.clientX - rect.left) / rect.width - 0.5;
+      var y = (e.clientY - rect.top) / rect.height - 0.5;
+      card.style.setProperty('--ry', (x*7) + 'deg');
+      card.style.setProperty('--rx', (y*-7) + 'deg');
+    });
+    scene.addEventListener('mouseleave', function(){
+      card.style.setProperty('--ry', '0deg');
+      card.style.setProperty('--rx', '0deg');
+    });
+  }
+
+  form.addEventListener('submit', function(e){ e.preventDefault(); });
+
+  goToStep(0);
+})();
+</script>
+
+</body>
+</html>
